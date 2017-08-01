@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour {
     public int level = 1;
 
     public GameType type;
+    public Difficulty difficulty = Difficulty.Normal;
 
     public bool chaosMode;
 
@@ -32,6 +33,7 @@ public class GameManager : MonoBehaviour {
 
     float adTimer;
     bool ableToAd = false;
+    GameType wantedTypeBeforeAd = GameType.Menu;
 
 	void Start () {
         Transform holdingButtons = GameObject.FindObjectOfType<GridLayoutGroup>().transform;
@@ -73,7 +75,7 @@ public class GameManager : MonoBehaviour {
         timer = 0;
         if (newLevel == StartType.AddOne) {
             level += 1;
-            maxTimer += 0.5f;
+            maxTimer += DificultyTime;
             if(level > maxNumbersAchieved)
                 maxNumbersAchieved = level;
             maxLevelText.text = maxNumbersAchieved.ToString();
@@ -86,7 +88,7 @@ public class GameManager : MonoBehaviour {
         } 
         else if (newLevel == StartType.RemoveOne) {
             level = Mathf.Clamp(level - 1, 1, int.MaxValue);
-            maxTimer = Mathf.Clamp(maxTimer - 0.5f, 1.5f, float.MaxValue);
+            maxTimer = Mathf.Clamp(maxTimer - DificultyTime, 1.5f, float.MaxValue);
 
             if (chaosMode) {
                 anaPlayedChaos++;
@@ -104,6 +106,12 @@ public class GameManager : MonoBehaviour {
         }
 
         objectiveText.text = GetRandomNumber();
+    }
+
+    float DificultyTime {
+        get {
+            return difficulty == Difficulty.Easy ? 0.7f : (difficulty == Difficulty.Normal ? 0.5f : (difficulty == Difficulty.Hard ? 0.4f : 0.3f));
+        }
     }
 
     /// <summary>
@@ -169,7 +177,7 @@ public class GameManager : MonoBehaviour {
 
 	void Update () {
         adTimer += Time.deltaTime;
-        if (adTimer >= 60 * 10) {
+        if (adTimer >= 60 * 5) {
             ableToAd = true;
         }
 
@@ -181,7 +189,8 @@ public class GameManager : MonoBehaviour {
                   {
                     { "Hit Play", anaHitPlay },
                     { "Numbers changed", anaPlayed },
-                    { "Numbers changed Chaos", anaPlayedChaos }
+                    { "Numbers changed Chaos", anaPlayedChaos },
+                    { "Difficulty", (int)difficulty }
                   });
 
                 Application.Quit();
@@ -231,15 +240,15 @@ public class GameManager : MonoBehaviour {
 
         anaHitPlay++;
 
-        ShowAd();
+        ShowAd(GameType.ToGame);
     }
 
     /// <summary>
     /// When the player hits home
     /// </summary>
     public void HitHome() {
-        ShowAd();
         type = GameType.ToMenu;
+        ShowAd(GameType.ToMenu);
     }
 
     /// <summary>
@@ -250,10 +259,19 @@ public class GameManager : MonoBehaviour {
     }
 
     /// <summary>
+    /// Set difficulty to dropdown box
+    /// </summary>
+    /// <param name="drop"></param>
+    public void ToggleDifficulty(Dropdown drop) {
+        difficulty = (Difficulty)drop.value;
+    }
+
+    /// <summary>
     /// Show an Ad if able
     /// </summary>
-    void ShowAd() {
+    void ShowAd(GameType gtype) {
         if (ableToAd) {
+            wantedTypeBeforeAd = gtype;
             ShowOptions options = new ShowOptions { resultCallback = AdDone };
             Advertisement.Show(options);
             type = GameType.Ad;
@@ -268,6 +286,7 @@ public class GameManager : MonoBehaviour {
         type = GameType.Menu;
         ableToAd = false;
         adTimer = 0;
+        type = wantedTypeBeforeAd;
     }
 }
 
@@ -277,4 +296,8 @@ public enum StartType {
 
 public enum GameType {
     Menu, Game, ToGame, ToMenu, Ad
+}
+
+public enum Difficulty {
+    Easy, Normal, Hard, ULTRA
 }
