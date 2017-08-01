@@ -16,6 +16,7 @@ public class GameManager : MonoBehaviour {
     public Transform slider;
     public Text objectiveText, maxLevelText;
     public Image timerImage;
+    public Text versionText;
     Button[] buttons = new Button[9];
     int[] buttonValue = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int[] objective;
@@ -42,6 +43,8 @@ public class GameManager : MonoBehaviour {
             int index = i;
             buttons[i].onClick.AddListener(() => HitButton(index));
         }
+        versionText.text = "v" + Application.version;
+
 
         Load();
 
