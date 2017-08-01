@@ -24,6 +24,11 @@ public class GameManager : MonoBehaviour {
     float timer;
     float maxTimer = 1.5f;
 
+    //analytics ----
+    int anaHitPlay;
+    int anaPlayed;
+    int anaPlayedChaos;
+
 	void Start () {
         Transform holdingButtons = GameObject.FindObjectOfType<GridLayoutGroup>().transform;
         for (int i = 0; i < 9; i++) {
@@ -37,16 +42,28 @@ public class GameManager : MonoBehaviour {
         NewNumber(StartType.Restart);
     }
 	
+    /// <summary>
+    /// Loads from Playerprefs
+    /// </summary>
     void Load() {
         maxNumbersAchieved = PlayerPrefs.GetInt("HighScore");
         maxLevelText.text = maxNumbersAchieved.ToString();
     }
 
+    
+
+    /// <summary>
+    /// Saves to Playerprefs
+    /// </summary>
     void Save() {
         PlayerPrefs.SetInt("HighScore", maxNumbersAchieved);
         PlayerPrefs.Save();
     }
 
+    /// <summary>
+    /// Rewrites the game's level indicators
+    /// </summary>
+    /// <param name="newLevel"></param>
     void NewNumber(StartType newLevel) {
         nextIndex = 0;
         timer = 0;
@@ -56,10 +73,22 @@ public class GameManager : MonoBehaviour {
             if(level > maxNumbersAchieved)
                 maxNumbersAchieved = level;
             maxLevelText.text = maxNumbersAchieved.ToString();
+
+            if (chaosMode) {
+                anaPlayedChaos++;
+            } else {
+                anaPlayed++;
+            }
         } 
         else if (newLevel == StartType.RemoveOne) {
             level = Mathf.Clamp(level - 1, 1, int.MaxValue);
             maxTimer = Mathf.Clamp(maxTimer - 0.5f, 1.5f, float.MaxValue);
+
+            if (chaosMode) {
+                anaPlayedChaos++;
+            } else {
+                anaPlayed++;
+            }
         } 
         else if(newLevel == StartType.Restart) {
             level = 1;
@@ -73,6 +102,10 @@ public class GameManager : MonoBehaviour {
         objectiveText.text = GetRandomNumber();
     }
 
+    /// <summary>
+    /// Sets the objective array
+    /// </summary>
+    /// <returns></returns>
     string GetRandomNumber() {
         string number = "";
         objective = new int[level];
@@ -83,6 +116,10 @@ public class GameManager : MonoBehaviour {
         return number;
     }
 
+    /// <summary>
+    /// change the button values for chaosmode
+    /// </summary>
+    /// <param name="change">true for chaos, false to reset</param>
     void changeButtonValue(bool change) {
         for (int i = 0; i < 9; i++) {
             int temp = 0;
@@ -99,6 +136,10 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// When the player hits a button
+    /// </summary>
+    /// <param name="i"></param>
     void HitButton(int i) {
         if (objective[nextIndex] == buttonValue[i]) {
             nextIndex++;
@@ -126,6 +167,14 @@ public class GameManager : MonoBehaviour {
         if (Input.GetKey(KeyCode.Escape)) {
             if (type == GameType.Menu) {
                 Save();
+
+                Analytics.CustomEvent("App Closed", new Dictionary<string, object>
+                  {
+                    { "Hit Play", anaHitPlay },
+                    { "Numbers changed", anaPlayed },
+                    { "Numbers changed Chaos", anaPlayedChaos }
+                  });
+
                 Application.Quit();
             }
             else if (type == GameType.Game) {
@@ -161,6 +210,9 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// When the player hits start
+    /// </summary>
     public void HitStart() {
         type = GameType.ToGame;
         NewNumber(StartType.Restart);
@@ -168,14 +220,19 @@ public class GameManager : MonoBehaviour {
         if (!chaosMode)
             changeButtonValue(false);
 
-        Analytics.SetUserGender(Gender.Female);
-        Analytics.SetUserBirthYear(1995);
+        anaHitPlay++;
     }
 
+    /// <summary>
+    /// When the player hits home
+    /// </summary>
     public void HitHome() {
         type = GameType.ToMenu;
     }
 
+    /// <summary>
+    /// Toggle chaosmode on/off
+    /// </summary>
     public void toggleChoasMode() {
         chaosMode = !chaosMode;
     }
