@@ -29,6 +29,9 @@ public class GameManager : MonoBehaviour {
     int anaPlayed;
     int anaPlayedChaos;
 
+    float adTimer;
+    bool ableToAd = false;
+
 	void Start () {
         Transform holdingButtons = GameObject.FindObjectOfType<GridLayoutGroup>().transform;
         for (int i = 0; i < 9; i++) {
@@ -164,6 +167,11 @@ public class GameManager : MonoBehaviour {
     }
 
 	void Update () {
+        adTimer += Time.deltaTime;
+        if (adTimer >= 60 * 10) {
+            ableToAd = true;
+        }
+
         if (Input.GetKey(KeyCode.Escape)) {
             if (type == GameType.Menu) {
                 Save();
@@ -221,12 +229,23 @@ public class GameManager : MonoBehaviour {
             changeButtonValue(false);
 
         anaHitPlay++;
+
+        if (ableToAd) {
+            adTimer = 0;
+            Debug.Log("run Ad");
+            ableToAd = false;
+        }
     }
 
     /// <summary>
     /// When the player hits home
     /// </summary>
     public void HitHome() {
+        if (ableToAd) {
+            adTimer = 0;
+            Debug.Log("run Ad");
+            ableToAd = false;
+        }
         type = GameType.ToMenu;
     }
 
