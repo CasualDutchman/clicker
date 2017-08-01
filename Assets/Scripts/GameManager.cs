@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using System.Collections.Generic;
 using UnityEngine.Analytics;
+using UnityEngine.Advertisements;
 
 public class GameManager : MonoBehaviour {
 
@@ -230,22 +231,14 @@ public class GameManager : MonoBehaviour {
 
         anaHitPlay++;
 
-        if (ableToAd) {
-            adTimer = 0;
-            Debug.Log("run Ad");
-            ableToAd = false;
-        }
+        ShowAd();
     }
 
     /// <summary>
     /// When the player hits home
     /// </summary>
     public void HitHome() {
-        if (ableToAd) {
-            adTimer = 0;
-            Debug.Log("run Ad");
-            ableToAd = false;
-        }
+        ShowAd();
         type = GameType.ToMenu;
     }
 
@@ -255,6 +248,27 @@ public class GameManager : MonoBehaviour {
     public void toggleChoasMode() {
         chaosMode = !chaosMode;
     }
+
+    /// <summary>
+    /// Show an Ad if able
+    /// </summary>
+    void ShowAd() {
+        if (ableToAd) {
+            ShowOptions options = new ShowOptions { resultCallback = AdDone };
+            Advertisement.Show(options);
+            type = GameType.Ad;
+        }
+    }
+
+    /// <summary>
+    /// When an ad is done
+    /// </summary>
+    /// <param name="result"></param>
+    void AdDone(ShowResult result) {
+        type = GameType.Menu;
+        ableToAd = false;
+        adTimer = 0;
+    }
 }
 
 public enum StartType {
@@ -262,5 +276,5 @@ public enum StartType {
 }
 
 public enum GameType {
-    Menu, Game, ToGame, ToMenu
+    Menu, Game, ToGame, ToMenu, Ad
 }
