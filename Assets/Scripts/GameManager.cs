@@ -13,10 +13,12 @@ public class GameManager : MonoBehaviour {
 
     public bool chaosMode;
 
-    public Transform slider;
+    public Transform slider, chaosBG;
     public Text objectiveText, maxLevelText;
-    public Image timerImage;
+    public Image timerImage, fader;
     public Text versionText;
+    public Color[] choasColorChoice;
+
     Button[] buttons = new Button[9];
     int[] buttonValue = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int[] objective;
@@ -36,6 +38,10 @@ public class GameManager : MonoBehaviour {
     bool ableToAd = false;
     GameType wantedTypeBeforeAd = GameType.Menu;
 
+    void Awake() {
+        fader.enabled = true;
+    }
+
 	void Start () {
         Transform holdingButtons = GameObject.FindObjectOfType<GridLayoutGroup>().transform;
         for (int i = 0; i < 9; i++) {
@@ -45,6 +51,7 @@ public class GameManager : MonoBehaviour {
         }
         versionText.text = "v" + Application.version;
 
+        changeBackground(false);
 
         Load();
 
@@ -58,8 +65,6 @@ public class GameManager : MonoBehaviour {
         maxNumbersAchieved = PlayerPrefs.GetInt("HighScore");
         maxLevelText.text = maxNumbersAchieved.ToString();
     }
-
-    
 
     /// <summary>
     /// Saves to Playerprefs
@@ -184,6 +189,12 @@ public class GameManager : MonoBehaviour {
             ableToAd = true;
         }
 
+        if (chaosMode) {
+            for(int i = 1; i < chaosBG.childCount; i++) {
+                chaosBG.GetChild(i).Rotate(Vector3.forward * Time.deltaTime * (45 * ((i + 1) * 0.2f)));
+            }
+        }
+
         if (Input.GetKey(KeyCode.Escape)) {
             if (type == GameType.Menu) {
                 Save();
@@ -203,7 +214,16 @@ public class GameManager : MonoBehaviour {
             }
         }
 
-        if (type == GameType.Game) {
+        if (type == GameType.Start) {
+            timer += Time.deltaTime * 0.7f;
+            fader.color = new Color(33 / 255f, 33 / 255f, 33 / 255f, 1 - timer);
+            if (1 - timer <= 0f) {
+                timer = 0;
+                type = GameType.Menu;
+                Destroy(fader.gameObject);
+            }
+        }
+        else if (type == GameType.Game) {
             timer += Time.deltaTime;
 
             timerImage.fillAmount = 1 - (timer / maxTimer);
@@ -213,7 +233,7 @@ public class GameManager : MonoBehaviour {
             }
         }
         else if (type == GameType.ToGame) {
-            timer += Time.deltaTime * 300;
+            timer += Time.deltaTime * 500;
             slider.localPosition = Vector3.Lerp(Vector3.zero, new Vector3(-400, 0, 0), timer / 400);
             if (slider.localPosition.x <= -400) {
                 slider.localPosition = new Vector3(-400, 0, 0);
@@ -221,7 +241,7 @@ public class GameManager : MonoBehaviour {
                 type = GameType.Game;
             }
         } else if (type == GameType.ToMenu) {
-            timer += Time.deltaTime * 300;
+            timer += Time.deltaTime * 500;
             slider.localPosition = Vector3.Lerp(new Vector3(-400, 0, 0), Vector3.zero, timer / 400);
             if (slider.localPosition.x >= 0) {
                 slider.localPosition = Vector3.zero;
@@ -259,6 +279,26 @@ public class GameManager : MonoBehaviour {
     /// </summary>
     public void toggleChoasMode() {
         chaosMode = !chaosMode;
+
+        changeBackground(chaosMode);
+    }
+
+    void changeBackground(bool chaos) {
+        if (chaos) {
+            List<Color> tempList = new List<Color>();
+            foreach (Color c in choasColorChoice) {
+                tempList.Add(c);
+            }
+            for (int i = 0; i < chaosBG.childCount; i++) {
+                int temp = Random.Range(0, tempList.Count);
+                chaosBG.GetChild(i).GetComponent<Image>().color = tempList[temp];
+                tempList.RemoveAt(temp);
+            }
+        }else {
+            for (int i = 0; i < chaosBG.childCount; i++) {
+                chaosBG.GetChild(i).GetComponent<Image>().color = new Color(0.1294f, 0.1294f, 0.1294f, 1);
+            }
+        }
     }
 
     /// <summary>
@@ -298,7 +338,7 @@ public enum StartType {
 }
 
 public enum GameType {
-    Menu, Game, ToGame, ToMenu, Ad
+    Start, Menu, Game, ToGame, ToMenu, Ad
 }
 
 public enum Difficulty {
