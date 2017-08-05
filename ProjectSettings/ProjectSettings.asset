@@ -121,7 +121,7 @@ PlayerSettings:
     16:10: 1
     16:9: 1
     Others: 1
-  bundleVersion: 0.1.57
+  bundleVersion: 0.2.62
   preloadedAssets: []
   metroInputSource: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -232,7 +232,7 @@ PlayerSettings:
   - m_BuildTarget: 
     m_Icons:
     - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: fd7bbb6cd20d8aa4480116fa090a9a65, type: 3}
+      m_Icon: {fileID: 2800000, guid: f2ed594573d4d064598a9f0fb772ba50, type: 3}
       m_Width: 128
       m_Height: 128
   m_BuildTargetBatching: []
@@ -240,7 +240,10 @@ PlayerSettings:
   - m_BuildTarget: AndroidPlayer
     m_APIs: 0b0000000800000015000000
     m_Automatic: 1
-  m_BuildTargetVRSettings: []
+  m_BuildTargetVRSettings:
+  - m_BuildTarget: Android
+    m_Enabled: 0
+    m_Devices: []
   openGLRequireES31: 0
   openGLRequireES31AEP: 0
   webPlayerTemplate: APPLICATION:Default

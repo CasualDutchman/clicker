@@ -19,20 +19,17 @@ public class GameManager : MonoBehaviour {
     public Text versionText;
     public Color[] choasColorChoice;
 
+    AnalyticsManager analyticsManager;
+
     Button[] buttons = new Button[9];
     int[] buttonValue = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int[] objective;
     int nextIndex = 0;
 
-    int maxNumbersAchieved;
+    int[] highScores;
 
     float timer;
     float maxTimer = 1.5f;
-
-    //analytics ----
-    int anaHitPlay;
-    int anaPlayed;
-    int anaPlayedChaos;
 
     float adTimer;
     bool ableToAd = false;
@@ -40,6 +37,9 @@ public class GameManager : MonoBehaviour {
 
     void Awake() {
         fader.enabled = true;
+
+        if (!GetComponent<AnalyticsManager>())
+            analyticsManager = gameObject.AddComponent<AnalyticsManager>();
     }
 
 	void Start () {
@@ -53,24 +53,36 @@ public class GameManager : MonoBehaviour {
 
         changeBackground(false);
 
+        highScores = new int[8];
+
         Load();
 
         NewNumber(StartType.Restart);
+    }
+
+    int GetHighScore {
+        get {
+            return (chaosMode ? 4 : 0) + (int)difficulty;
+        }
     }
 	
     /// <summary>
     /// Loads from Playerprefs
     /// </summary>
     void Load() {
-        maxNumbersAchieved = PlayerPrefs.GetInt("HighScore");
-        maxLevelText.text = maxNumbersAchieved.ToString();
+        for (int i = 0; i < highScores.Length; i++) {
+            highScores[i] = PlayerPrefs.GetInt("HighScore" + i);
+        }
+        maxLevelText.text = highScores[GetHighScore].ToString();
     }
 
     /// <summary>
     /// Saves to Playerprefs
     /// </summary>
     void Save() {
-        PlayerPrefs.SetInt("HighScore", maxNumbersAchieved);
+        for (int i = 0; i < highScores.Length; i++) {
+            PlayerPrefs.SetInt("HighScore" + i, highScores[i]);
+        }
         PlayerPrefs.Save();
     }
 
@@ -84,25 +96,17 @@ public class GameManager : MonoBehaviour {
         if (newLevel == StartType.AddOne) {
             level += 1;
             maxTimer += DificultyTime;
-            if(level > maxNumbersAchieved)
-                maxNumbersAchieved = level;
-            maxLevelText.text = maxNumbersAchieved.ToString();
+            if(level > highScores[GetHighScore])
+                highScores[GetHighScore] = level;
+            maxLevelText.text = highScores[GetHighScore].ToString();
 
-            if (chaosMode) {
-                anaPlayedChaos++;
-            } else {
-                anaPlayed++;
-            }
+            analyticsManager.AddClick(chaosMode);
         } 
         else if (newLevel == StartType.RemoveOne) {
             level = Mathf.Clamp(level - 1, 1, int.MaxValue);
             maxTimer = Mathf.Clamp(maxTimer - DificultyTime, 1.5f, float.MaxValue);
 
-            if (chaosMode) {
-                anaPlayedChaos++;
-            } else {
-                anaPlayed++;
-            }
+            analyticsManager.AddClick(chaosMode);
         } 
         else if(newLevel == StartType.Restart) {
             level = 1;
@@ -199,13 +203,7 @@ public class GameManager : MonoBehaviour {
             if (type == GameType.Menu) {
                 Save();
 
-                Analytics.CustomEvent("App Closed", new Dictionary<string, object>
-                  {
-                    { "Hit Play", anaHitPlay },
-                    { "Numbers changed", anaPlayed },
-                    { "Numbers changed Chaos", anaPlayedChaos },
-                    { "Difficulty", (int)difficulty }
-                  });
+                analyticsManager.SendAnalytics((int)difficulty);
 
                 Application.Quit();
             }
@@ -261,8 +259,6 @@ public class GameManager : MonoBehaviour {
         if (!chaosMode)
             changeButtonValue(false);
 
-        anaHitPlay++;
-
         ShowAd(GameType.ToGame);
     }
 
@@ -307,6 +303,8 @@ public class GameManager : MonoBehaviour {
     /// <param name="drop"></param>
     public void ToggleDifficulty(Dropdown drop) {
         difficulty = (Difficulty)drop.value;
+
+        maxLevelText.text = highScores[GetHighScore].ToString();
     }
 
     /// <summary>
