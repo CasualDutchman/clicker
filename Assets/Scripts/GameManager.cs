@@ -8,16 +8,16 @@ public class GameManager : MonoBehaviour {
 
     public int level = 1;
 
-    public GameType type;
+    public GameType type = GameType.AgeGender;
     public Difficulty difficulty = Difficulty.Normal;
 
-    public bool chaosMode;
+    public bool chaosMode, colorMode;
 
-    public Transform slider, chaosBG;
+    public Transform slider;
     public Text objectiveText, maxLevelText;
     public Image timerImage, fader;
     public Text versionText;
-    public Color[] choasColorChoice;
+    public Color[] chaosColorChoice;
 
     AnalyticsManager analyticsManager;
 
@@ -35,11 +35,23 @@ public class GameManager : MonoBehaviour {
     bool ableToAd = false;
     GameType wantedTypeBeforeAd = GameType.Menu;
 
+    bool hasAgeGender;
+
     void Awake() {
         fader.enabled = true;
 
-        if (!GetComponent<AnalyticsManager>())
+        if (!GetComponent<AnalyticsManager>()) {
             analyticsManager = gameObject.AddComponent<AnalyticsManager>();
+        } else {
+            analyticsManager = GetComponent<AnalyticsManager>();
+        }
+
+        if (PlayerPrefs.HasKey("UserBirth")) {
+            Destroy(slider.Find("OnlyFirst").gameObject);
+            hasAgeGender = true;
+        } else {
+            slider.localPosition = new Vector3(400, 0, 0);
+        }
     }
 
 	void Start () {
@@ -51,9 +63,9 @@ public class GameManager : MonoBehaviour {
         }
         versionText.text = "v" + Application.version;
 
-        changeBackground(false);
+        changeButtonColors(false);
 
-        highScores = new int[8];
+        highScores = new int[4];
 
         Load();
 
@@ -62,7 +74,7 @@ public class GameManager : MonoBehaviour {
 
     int GetHighScore {
         get {
-            return (chaosMode ? 4 : 0) + (int)difficulty;
+            return (int)difficulty;
         }
     }
 	
@@ -74,6 +86,8 @@ public class GameManager : MonoBehaviour {
             highScores[i] = PlayerPrefs.GetInt("HighScore" + i);
         }
         maxLevelText.text = highScores[GetHighScore].ToString();
+
+        analyticsManager.Load();
     }
 
     /// <summary>
@@ -83,6 +97,8 @@ public class GameManager : MonoBehaviour {
         for (int i = 0; i < highScores.Length; i++) {
             PlayerPrefs.SetInt("HighScore" + i, highScores[i]);
         }
+
+        analyticsManager.Save();
         PlayerPrefs.Save();
     }
 
@@ -115,6 +131,10 @@ public class GameManager : MonoBehaviour {
 
         if (chaosMode) {
             changeButtonValue(true);
+        }
+
+        if (colorMode) {
+            changeButtonColors(true);
         }
 
         objectiveText.text = GetRandomNumber();
@@ -193,12 +213,6 @@ public class GameManager : MonoBehaviour {
             ableToAd = true;
         }
 
-        if (chaosMode) {
-            for(int i = 1; i < chaosBG.childCount; i++) {
-                chaosBG.GetChild(i).Rotate(Vector3.forward * Time.deltaTime * (45 * ((i + 1) * 0.2f)));
-            }
-        }
-
         if (Input.GetKey(KeyCode.Escape)) {
             if (type == GameType.Menu) {
                 Save();
@@ -217,8 +231,8 @@ public class GameManager : MonoBehaviour {
             fader.color = new Color(33 / 255f, 33 / 255f, 33 / 255f, 1 - timer);
             if (1 - timer <= 0f) {
                 timer = 0;
-                type = GameType.Menu;
-                Destroy(fader.gameObject);
+                type = hasAgeGender ? GameType.Menu : GameType.AgeGender;
+                Destroy(fader.gameObject);                    
             }
         }
         else if (type == GameType.Game) {
@@ -228,6 +242,16 @@ public class GameManager : MonoBehaviour {
 
             if (timer >= maxTimer) {
                 NewNumber(StartType.RemoveOne);
+            }
+        }
+        else if (type == GameType.AgeToMenu) {
+            timer += Time.deltaTime * 500;
+            slider.localPosition = Vector3.Lerp(new Vector3(400, 0, 0), Vector3.zero, timer / 400);
+            if (slider.localPosition.x <= 0) {
+                slider.localPosition = Vector3.zero;
+                timer = 0;
+                type = GameType.Menu;
+                Destroy(slider.Find("OnlyFirst").gameObject);
             }
         }
         else if (type == GameType.ToGame) {
@@ -259,6 +283,9 @@ public class GameManager : MonoBehaviour {
         if (!chaosMode)
             changeButtonValue(false);
 
+        if (!colorMode)
+            changeButtonColors(false);
+
         ShowAd(GameType.ToGame);
     }
 
@@ -275,25 +302,26 @@ public class GameManager : MonoBehaviour {
     /// </summary>
     public void toggleChoasMode() {
         chaosMode = !chaosMode;
-
-        changeBackground(chaosMode);
     }
 
-    void changeBackground(bool chaos) {
-        if (chaos) {
-            List<Color> tempList = new List<Color>();
-            foreach (Color c in choasColorChoice) {
-                tempList.Add(c);
-            }
-            for (int i = 0; i < chaosBG.childCount; i++) {
-                int temp = Random.Range(0, tempList.Count);
-                chaosBG.GetChild(i).GetComponent<Image>().color = tempList[temp];
-                tempList.RemoveAt(temp);
-            }
-        }else {
-            for (int i = 0; i < chaosBG.childCount; i++) {
-                chaosBG.GetChild(i).GetComponent<Image>().color = new Color(0.1294f, 0.1294f, 0.1294f, 1);
-            }
+    /// <summary>
+    /// Toggle colorMode on/off
+    /// </summary>
+    public void toggleColorMode() {
+        colorMode = !colorMode;
+    }
+
+    /// <summary>
+    /// Change the color of all buttons randomly
+    /// </summary>
+    /// <param name="color"></param>
+    void changeButtonColors(bool color) {
+        foreach (Button b in buttons) {
+            Image im = b.GetComponent<Image>();
+            im.color = color ? chaosColorChoice[Random.Range(0, chaosColorChoice.Length)] : Color.white;
+
+            Text te = b.transform.GetChild(0).GetComponent<Text>();
+            te.color = color ? Color.white - im.color + Color.black : new Color(50f / 255f, 50f / 255f, 50f / 255f, 1);
         }
     }
 
@@ -305,6 +333,15 @@ public class GameManager : MonoBehaviour {
         difficulty = (Difficulty)drop.value;
 
         maxLevelText.text = highScores[GetHighScore].ToString();
+    }
+
+    public void ClearPlayerprefs() {
+        PlayerPrefs.DeleteAll();
+    }
+
+    public void GoToMenu() {
+        type = GameType.AgeToMenu;
+        hasAgeGender = true;
     }
 
     /// <summary>
@@ -336,7 +373,7 @@ public enum StartType {
 }
 
 public enum GameType {
-    Start, Menu, Game, ToGame, ToMenu, Ad
+    Start, Menu, Game, ToGame, ToMenu, Ad, AgeGender, AgeToMenu
 }
 
 public enum Difficulty {

@@ -121,7 +121,7 @@ PlayerSettings:
     16:10: 1
     16:9: 1
     Others: 1
-  bundleVersion: 0.2.62
+  bundleVersion: 0.3.97
   preloadedAssets: []
   metroInputSource: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -603,7 +603,7 @@ PlayerSettings:
   facebookSdkVersion: 7.9.4
   apiCompatibilityLevel: 2
   cloudProjectId: 2057e472-4282-4a3f-a625-2bc147143825
-  projectName: clicker
+  projectName: Get the Number
   organizationId: pieterorg
   cloudEnabled: 0
   enableNativePlatformBackendsForNewInputSystem: 0
