@@ -121,7 +121,7 @@ PlayerSettings:
     16:10: 1
     16:9: 1
     Others: 1
-  bundleVersion: 0.4.105
+  bundleVersion: 0.6.137
   preloadedAssets: []
   metroInputSource: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -143,7 +143,7 @@ PlayerSettings:
   applicationIdentifier:
     Android: com.casualdutchman.clicker
   buildNumber: {}
-  AndroidBundleVersionCode: 1
+  AndroidBundleVersionCode: 2
   AndroidMinSdkVersion: 16
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1
@@ -217,8 +217,8 @@ PlayerSettings:
   AndroidTargetDevice: 0
   AndroidSplashScreenScale: 0
   androidSplashScreen: {fileID: 0}
-  AndroidKeystoreName: C:/Users/piete/Documents/unityGameFolder/ClickerGame/user.keystore
-  AndroidKeyaliasName: publickey
+  AndroidKeystoreName: C:/Users/piete/Desktop/user.keystore
+  AndroidKeyaliasName: getthenumber
   AndroidTVCompatibility: 0
   AndroidIsGame: 1
   androidEnableBanner: 0

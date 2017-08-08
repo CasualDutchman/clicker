@@ -1,14 +1,13 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using GooglePlayGames;
 using System.Collections.Generic;
-using UnityEngine.Analytics;
-using UnityEngine.Advertisements;
 
 public class GameManager : MonoBehaviour {
 
     public int level = 1;
 
-    public GameType type = GameType.AgeGender;
+    public GameType type;
     public Difficulty difficulty = Difficulty.Normal;
 
     public bool chaosMode, colorMode;
@@ -18,8 +17,6 @@ public class GameManager : MonoBehaviour {
     public Image timerImage, fader;
     public Text versionText;
     public Color[] chaosColorChoice;
-
-    AnalyticsManager analyticsManager;
 
     Button[] buttons = new Button[9];
     int[] buttonValue = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -31,27 +28,16 @@ public class GameManager : MonoBehaviour {
     float timer;
     float maxTimer = 1.5f;
 
-    float adTimer;
-    bool ableToAd = false;
-    GameType wantedTypeBeforeAd = GameType.Menu;
-
-    bool hasAgeGender;
-
     void Awake() {
+
+        PlayGamesPlatform.Activate();
+        Social.localUser.Authenticate((bool success) => {
+            if (success) {
+                type = GameType.Start;
+            }
+        });
+
         fader.enabled = true;
-
-        if (!GetComponent<AnalyticsManager>()) {
-            analyticsManager = gameObject.AddComponent<AnalyticsManager>();
-        } else {
-            analyticsManager = GetComponent<AnalyticsManager>();
-        }
-
-        if (PlayerPrefs.HasKey("UserBirth")) {
-            Destroy(slider.Find("OnlyFirst").gameObject);
-            hasAgeGender = true;
-        } else {
-            slider.localPosition = new Vector3(400, 0, 0);
-        }
     }
 
 	void Start () {
@@ -86,8 +72,6 @@ public class GameManager : MonoBehaviour {
             highScores[i] = PlayerPrefs.GetInt("HighScore" + i);
         }
         maxLevelText.text = highScores[GetHighScore].ToString();
-
-        analyticsManager.Load();
     }
 
     /// <summary>
@@ -97,8 +81,6 @@ public class GameManager : MonoBehaviour {
         for (int i = 0; i < highScores.Length; i++) {
             PlayerPrefs.SetInt("HighScore" + i, highScores[i]);
         }
-
-        analyticsManager.Save();
         PlayerPrefs.Save();
     }
 
@@ -112,17 +94,28 @@ public class GameManager : MonoBehaviour {
         if (newLevel == StartType.AddOne) {
             level += 1;
             maxTimer += DificultyTime;
-            if(level > highScores[GetHighScore])
+            if (level > highScores[GetHighScore]) {
                 highScores[GetHighScore] = level;
-            maxLevelText.text = highScores[GetHighScore].ToString();
 
-            analyticsManager.AddClick(chaosMode);
+                if (highScores[3] >= 15 && colorMode && chaosMode) {
+                    UnlockAchievement(GPGSIds.achievement_ultra_color_chaos);
+                }
+
+                if (highScores[0] >= 20 && highScores[1] >= 20 && highScores[2] >= 20 && highScores[3] >= 20) {
+                    UnlockAchievement(GPGSIds.achievement_four_of_a_kind);
+                }
+
+                for (int i = 0; i < 4; i++) {
+                    if (highScores[i] >= 50) {
+                        UnlockAchievement(GPGSIds.achievement_5050);
+                    }
+                }
+            }
+            maxLevelText.text = highScores[GetHighScore].ToString();
         } 
         else if (newLevel == StartType.RemoveOne) {
             level = Mathf.Clamp(level - 1, 1, int.MaxValue);
             maxTimer = Mathf.Clamp(maxTimer - DificultyTime, 1.5f, float.MaxValue);
-
-            analyticsManager.AddClick(chaosMode);
         } 
         else if(newLevel == StartType.Restart) {
             level = 1;
@@ -208,21 +201,13 @@ public class GameManager : MonoBehaviour {
     }
 
 	void Update () {
-        adTimer += Time.deltaTime;
-        if (adTimer >= 60 * 5) {
-            ableToAd = true;
-        }
-
         if (Input.GetKey(KeyCode.Escape)) {
             if (type == GameType.Menu) {
                 Save();
-
-                analyticsManager.SendAnalytics((int)difficulty);
-
                 Application.Quit();
             }
             else if (type == GameType.Game) {
-                type = GameType.ToMenu;
+                HitHome();
             }
         }
 
@@ -231,7 +216,7 @@ public class GameManager : MonoBehaviour {
             fader.color = new Color(33 / 255f, 33 / 255f, 33 / 255f, 1 - timer);
             if (1 - timer <= 0f) {
                 timer = 0;
-                type = hasAgeGender ? GameType.Menu : GameType.AgeGender;
+                type = GameType.Menu;
                 Destroy(fader.gameObject);                    
             }
         }
@@ -242,16 +227,6 @@ public class GameManager : MonoBehaviour {
 
             if (timer >= maxTimer) {
                 NewNumber(StartType.RemoveOne);
-            }
-        }
-        else if (type == GameType.AgeToMenu) {
-            timer += Time.deltaTime * 500;
-            slider.localPosition = Vector3.Lerp(new Vector3(400, 0, 0), Vector3.zero, timer / 400);
-            if (slider.localPosition.x <= 0) {
-                slider.localPosition = Vector3.zero;
-                timer = 0;
-                type = GameType.Menu;
-                Destroy(slider.Find("OnlyFirst").gameObject);
             }
         }
         else if (type == GameType.ToGame) {
@@ -266,6 +241,22 @@ public class GameManager : MonoBehaviour {
             timer += Time.deltaTime * 500;
             slider.localPosition = Vector3.Lerp(new Vector3(-400, 0, 0), Vector3.zero, timer / 400);
             if (slider.localPosition.x >= 0) {
+                slider.localPosition = Vector3.zero;
+                timer = 0;
+                type = GameType.Menu;
+            }
+        } else if (type == GameType.ToServices) {
+            timer += Time.deltaTime * 500;
+            slider.localPosition = Vector3.Lerp(Vector3.zero, new Vector3(0, 600, 0), timer / 400);
+            if (slider.localPosition.y >= 600) {
+                slider.localPosition = new Vector3(0, 600, 0);
+                timer = 0;
+                type = GameType.Services;
+            }
+        } else if (type == GameType.SetToMenu) {
+            timer += Time.deltaTime * 500;
+            slider.localPosition = Vector3.Lerp(new Vector3(0, 600, 0), Vector3.zero, timer / 400);
+            if (slider.localPosition.y <= 0) {
                 slider.localPosition = Vector3.zero;
                 timer = 0;
                 type = GameType.Menu;
@@ -285,8 +276,6 @@ public class GameManager : MonoBehaviour {
 
         if (!colorMode)
             changeButtonColors(false);
-
-        ShowAd(GameType.ToGame);
     }
 
     /// <summary>
@@ -294,7 +283,38 @@ public class GameManager : MonoBehaviour {
     /// </summary>
     public void HitHome() {
         type = GameType.ToMenu;
-        ShowAd(GameType.ToMenu);
+
+        ReportScoreToLeaderboard(difficulty);
+    }
+
+    public void HitBack() {
+        type = GameType.SetToMenu;
+    }
+
+    public void HitServices() {
+        type = GameType.ToServices;
+    }
+
+    void ReportScoreToLeaderboard(Difficulty dif) {
+        string lbname = GetLeaderboardID(dif);
+
+        if (lbname.Length > 0) {
+            Social.ReportScore(highScores[(int)dif], lbname, (bool success) => { });
+            UnlockAchievement(GPGSIds.achievement_hit_the_leaderboards);
+        }
+    }
+
+    string GetLeaderboardID(Difficulty dif) {
+        switch (dif) {
+            case Difficulty.Hard: return GPGSIds.leaderboard_hard_score;
+            case Difficulty.ULTRA: return GPGSIds.leaderboard_ultra_score;
+            default: break;
+        }
+        return "";
+    }
+
+    void UnlockAchievement(string id) {
+        Social.ReportProgress(id, 100.0f, (bool success) => { });
     }
 
     /// <summary>
@@ -335,36 +355,16 @@ public class GameManager : MonoBehaviour {
         maxLevelText.text = highScores[GetHighScore].ToString();
     }
 
+    public void ShowAchievements() {
+        PlayGamesPlatform.Instance.ShowAchievementsUI();
+    }
+
+    public void ShowLeaderboard() {
+        PlayGamesPlatform.Instance.ShowLeaderboardUI();
+    }
+
     public void ClearPlayerprefs() {
         PlayerPrefs.DeleteAll();
-    }
-
-    public void GoToMenu() {
-        type = GameType.AgeToMenu;
-        hasAgeGender = true;
-    }
-
-    /// <summary>
-    /// Show an Ad if able
-    /// </summary>
-    void ShowAd(GameType gtype) {
-        if (ableToAd) {
-            wantedTypeBeforeAd = gtype;
-            ShowOptions options = new ShowOptions { resultCallback = AdDone };
-            Advertisement.Show(options);
-            type = GameType.Ad;
-        }
-    }
-
-    /// <summary>
-    /// When an ad is done
-    /// </summary>
-    /// <param name="result"></param>
-    void AdDone(ShowResult result) {
-        type = GameType.Menu;
-        ableToAd = false;
-        adTimer = 0;
-        type = wantedTypeBeforeAd;
     }
 }
 
@@ -373,7 +373,7 @@ public enum StartType {
 }
 
 public enum GameType {
-    Start, Menu, Game, ToGame, ToMenu, Ad, AgeGender, AgeToMenu
+    Start, Menu, Game, ToGame, ToMenu, None, Services, ToServices, SetToMenu
 }
 
 public enum Difficulty {
